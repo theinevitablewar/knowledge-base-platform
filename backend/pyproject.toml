@@ -1,0 +1,66 @@
+[project]
+name = "knowledge-base-platform-backend"
+version = "0.1.0"
+description = "Multi-tenant enterprise RAG platform API"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "alembic",
+  "asyncpg",
+  "celery[redis]",
+  "email-validator",
+  "fastapi",
+  "greenlet",
+  "httpx",
+  "langchain",
+  "langchain-community",
+  "langchain-openai",
+  "langchain-qdrant",
+  "langchain-text-splitters",
+  "langsmith",
+  "minio",
+  "pwdlib[argon2]",
+  "pydantic-settings",
+  "PyJWT",
+  "PyMuPDF",
+  "python-docx",
+  "python-multipart",
+  "qdrant-client",
+  "redis",
+  "sqlalchemy",
+  "structlog",
+  "uvicorn[standard]"
+]
+
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[dependency-groups]
+dev = ["aiosqlite", "mypy", "pytest", "pytest-asyncio", "ruff"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+addopts = "-p no:cacheprovider -p no:langsmith_plugin"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+ignore = ["B008", "ASYNC240"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]
+exclude = ["migrations"]
+disable_error_code = ["import-untyped"]
+
+[[tool.mypy.overrides]]
+module = ["app.api.*", "app.workers.*", "app.main"]
+ignore_errors = true
