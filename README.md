@@ -1,15 +1,15 @@
-# Knowledge Base Platform
+# 知识库管理平台
 
 独立部署的多租户企业知识库与 RAG 管理平台。它提供文档上传、异步解析/分块/向量化、安全检索、流式问答、RBAC、审计日志，以及面向 LangGraph、Deep Agents 等调用方的 HTTP API。
 
 ## 功能
 
-- React + Ant Design 管理后台：仪表盘、知识库、文档、Chunk、检索/问答测试、成员和任务中心。
+- React + Ant Design 管理后台：仪表盘、知识库、文档、文本块（Chunk）、检索/问答测试、成员和任务中心。
 - PDF、DOCX、TXT、Markdown 解析；LangChain 递归、分页和 Markdown 标题分块。
 - Celery 异步幂等管线，原文件和解析中间件存 MinIO，业务数据存 PostgreSQL，向量存 Qdrant。
 - JWT Access/Refresh Token、Argon2 密码、哈希 API Key、租户隔离和知识库五级 RBAC。
-- SecureRetriever 强制安全过滤并用 PostgreSQL 二次校验；RAG 返回可验证 Chunk 引用。
-- OpenAI-compatible LLM/Embedding、确定性 Mock 模式和可选 LangSmith tracing。
+- `SecureRetriever` 强制安全过滤并用 PostgreSQL 二次校验；RAG 返回可验证的文本块引用。
+- OpenAI 兼容的大语言模型与嵌入模型、确定性模拟模式和可选 LangSmith 链路追踪。
 
 ## 架构与目录
 
@@ -60,14 +60,14 @@ docker compose up --build
 - 管理后台：http://localhost:3000
 - Swagger：http://localhost:8000/docs
 - 健康检查：http://localhost:8000/health
-- MinIO Console：http://localhost:9001
-- Qdrant Dashboard：http://localhost:6333/dashboard
+- MinIO 管理控制台：http://localhost:9001
+- Qdrant 管理界面：http://localhost:6333/dashboard
 
 停止服务使用 `docker compose down`；附加 `-v` 会永久删除开发数据卷，请谨慎使用。
 
 ## 本地开发
 
-基础设施可先用 Compose 启动，再分别运行 API、Worker 和前端：
+基础设施可先用 Compose 启动，再分别运行 API、异步任务 Worker 和前端：
 
 ```powershell
 docker compose up -d postgres redis minio minio-init qdrant
@@ -91,7 +91,7 @@ npm run dev
 
 ## API 示例
 
-先登录并将返回的 Access Token 放入 `$token`：
+先登录并将返回的访问令牌放入 `$token`：
 
 ```powershell
 $login = Invoke-RestMethod -Method Post http://localhost:8000/api/v1/auth/login -ContentType 'application/json' -Body '{"username":"admin","password":"admin123456"}'
@@ -113,7 +113,7 @@ Invoke-RestMethod -Method Post http://localhost:8000/api/v1/retrieval/search -He
 
 问答使用相同请求体调用 `/api/v1/rag/answer`，流式 SSE 调用 `/api/v1/rag/answer/stream`。响应引用包含真实 `document_id`、`chunk_id`、页码和分数。
 
-## Agent 接入
+## 智能体接入
 
 创建具有 `knowledge_base:read`、`document:read`、`retrieval:search`、`rag:answer` scopes 的 API Key，然后使用 `/api/v1/agent/*`。需要让外部应用上传、更新或删除文档时，再授予 `document:write`。异步客户端见 [scripts/knowledge_base_client.py](scripts/knowledge_base_client.py)，LangChain/Deep Agents `@tool` 示例见 [scripts/deep_agents_tool.py](scripts/deep_agents_tool.py)。Agent 不应直连 Qdrant、数据库或 MinIO。
 
@@ -140,8 +140,8 @@ npm run build
 
 ## 常见问题
 
-- 文档一直 `queued`：检查 `worker` 日志和 Redis；Windows 本地 Worker 使用 `--pool=solo`。
-- Embedding 维度错误：知识库配置、模型输出维度和 Qdrant Collection 必须一致；修改后重新索引。
+- 文档一直处于 `queued`：检查 Worker 日志和 Redis；Windows 本地 Worker 使用 `--pool=solo`。
+- 嵌入维度错误：知识库配置、模型输出维度和 Qdrant Collection 必须一致；修改后重新索引。
 - MinIO 上传失败：确认 bucket 初始化容器成功，且 endpoint 在容器内为 `minio:9000`。
 - 无检索结果：文档必须为 `ready` 且 `enabled=true`，调用方也必须具有该知识库权限。
 
