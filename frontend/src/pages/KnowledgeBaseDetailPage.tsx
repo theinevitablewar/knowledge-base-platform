@@ -8,6 +8,7 @@ import { useParams } from 'react-router-dom'
 import { api, errorMessage } from '../api/client'
 import { resources } from '../api/resources'
 import type { Chunk, DocumentItem, SearchResult } from '../types'
+import { createOriginalPreviewBlob } from '../utils/documentPreview'
 
 const statusColor: Record<string,string> = {ready:'green',failed:'red',disabled:'default',queued:'blue',parsing:'gold',chunking:'gold',embedding:'purple',indexing:'purple'}
 
@@ -26,7 +27,8 @@ export function KnowledgeBaseDetailPage() {
     preview.document.body.textContent = '正在加载原始文件…'
     setOpeningDocument(document.id)
     try {
-      const blob = await resources.originalFile(document.id), url = URL.createObjectURL(blob)
+      const source = await resources.originalFile(document.id)
+      const blob = await createOriginalPreviewBlob(document, source), url = URL.createObjectURL(blob)
       preview.location.replace(url)
       window.setTimeout(()=>URL.revokeObjectURL(url),300_000)
     } catch(e) {
