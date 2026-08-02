@@ -38,6 +38,7 @@ class OpenAIEmbeddingsAdapter:
             dimensions=dimension,
             api_key=settings.openai_api_key,
             base_url=settings.openai_base_url or None,
+            check_embedding_ctx_length=False,
         )
 
     async def embed_documents(self, texts: list[str]) -> list[list[float]]:
