@@ -9,8 +9,8 @@ from app.core.security import Principal
 from app.models import KnowledgeBase, KnowledgeBaseMember, WorkspaceMember
 
 ROLE_PERMISSIONS = {
-    "owner": {"view", "search", "upload", "edit", "delete", "members", "settings"},
-    "admin": {"view", "search", "upload", "edit", "delete", "members"},
+    "owner": {"view", "search", "upload", "edit", "delete", "members", "settings", "reindex"},
+    "admin": {"view", "search", "upload", "edit", "delete", "members", "reindex"},
     "editor": {"view", "search", "upload", "edit", "reindex"},
     "contributor": {"view", "search", "upload"},
     "viewer": {"view", "search"},
