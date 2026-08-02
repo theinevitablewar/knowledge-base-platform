@@ -29,9 +29,15 @@ async def test_upload_is_async_and_stores_original(client, seeded, session_facto
     )
     assert response.status_code == 202, response.text
     assert response.json()[0]["status"] == "queued"
+    document_id = response.json()[0]["document_id"]
     async with session_factory() as session:
         document = await session.scalar(select(Document).where(Document.knowledge_base_id == kb_id))
         assert document and document.storage_key in storage.objects
+    original = await client.get(f"/api/v1/documents/{document_id}/content", headers=headers)
+    assert original.status_code == 200
+    assert original.content == b"# Policy\nApprove first."
+    assert original.headers["content-type"].startswith("text/markdown")
+    assert original.headers["content-disposition"] == "inline; filename*=UTF-8''policy.md"
 
 
 @pytest.mark.asyncio

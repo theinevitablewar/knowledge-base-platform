@@ -1,4 +1,4 @@
-import { DeleteOutlined, InboxOutlined, ReloadOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EyeOutlined, InboxOutlined, ReloadOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Alert, Button, Card, Descriptions, Drawer, Form, Input, InputNumber, List, Select, Space, Switch, Table, Tabs, Tag, Typography, Upload, message } from 'antd'
 import type { UploadProps } from 'antd'
@@ -7,21 +7,38 @@ import ReactMarkdown from 'react-markdown'
 import { useParams } from 'react-router-dom'
 import { api, errorMessage } from '../api/client'
 import { resources } from '../api/resources'
-import type { Chunk, SearchResult } from '../types'
+import type { Chunk, DocumentItem, SearchResult } from '../types'
 
 const statusColor: Record<string,string> = {ready:'green',failed:'red',disabled:'default',queued:'blue',parsing:'gold',chunking:'gold',embedding:'purple',indexing:'purple'}
 
 export function KnowledgeBaseDetailPage() {
   const {id = ''} = useParams(), client = useQueryClient(), [selectedDoc,setSelectedDoc] = useState('')
+  const [openingDocument,setOpeningDocument] = useState('')
   const knowledge = useQuery({queryKey:['knowledge-base',id],queryFn:async()=>(await api.get(`/knowledge-bases/${id}`)).data})
   const documents = useQuery({queryKey:['documents',id],queryFn:()=>resources.documents(id),refetchInterval:4000})
   const chunks = useQuery({queryKey:['chunks',selectedDoc],queryFn:()=>resources.chunks(selectedDoc),enabled:Boolean(selectedDoc)})
   const refresh = () => void client.invalidateQueries({queryKey:['documents',id]})
+  const openOriginal = async (document: DocumentItem) => {
+    const preview = window.open('', '_blank')
+    if (!preview) { message.warning('浏览器阻止了新窗口，请允许本站弹出窗口后重试');return }
+    preview.opener = null
+    preview.document.title = `正在打开 ${document.original_name}`
+    preview.document.body.textContent = '正在加载原始文件…'
+    setOpeningDocument(document.id)
+    try {
+      const blob = await resources.originalFile(document.id), url = URL.createObjectURL(blob)
+      preview.location.replace(url)
+      window.setTimeout(()=>URL.revokeObjectURL(url),300_000)
+    } catch(e) {
+      preview.close()
+      message.error(errorMessage(e))
+    } finally { setOpeningDocument('') }
+  }
   const upload: UploadProps['customRequest'] = async (option) => { const data = new FormData(); data.append('files', option.file as File); try { await api.post(`/knowledge-bases/${id}/documents`,data); option.onSuccess?.({});message.success('已上传，后台正在处理');refresh() } catch(e){option.onError?.(e as Error);message.error(errorMessage(e))} }
   const action = useMutation({mutationFn:({doc,verb}:{doc:string;verb:string})=>verb==='delete'?api.delete(`/documents/${doc}`):api.post(`/documents/${doc}/${verb}`),onSuccess:refresh,onError:(e)=>message.error(errorMessage(e))})
   const items = [
     {key:'overview',label:'概览',children:<Descriptions bordered column={2} items={[{key:'name',label:'名称',children:knowledge.data?.name},{key:'status',label:'状态',children:knowledge.data?.status},{key:'visibility',label:'可见范围',children:knowledge.data?.visibility},{key:'chunk',label:'分块参数',children:`${knowledge.data?.chunk_size} / ${knowledge.data?.chunk_overlap}`}]}/>},
-    {key:'documents',label:'文档',children:<><Upload.Dragger multiple accept=".pdf,.docx,.txt,.md,.markdown" customRequest={upload} showUploadList={false}><p className="ant-upload-drag-icon"><InboxOutlined/></p><p>拖拽或点击上传 PDF、DOCX、TXT、Markdown</p><p className="ant-upload-hint">上传后由 Celery 异步解析和索引</p></Upload.Dragger><Table className="section-card" rowKey="id" dataSource={documents.data} loading={documents.isLoading} columns={[{title:'文件',dataIndex:'original_name'},{title:'状态',dataIndex:'status',render:(v:string)=><Tag color={statusColor[v]}>{v}</Tag>},{title:'页/Chunk',render:(_,r)=>`${r.page_count} / ${r.chunk_count}`},{title:'启用',render:(_,r)=><Switch checked={r.enabled} onChange={(on)=>action.mutate({doc:r.id,verb:on?'enable':'disable'})}/>},{title:'操作',render:(_,r)=><Space><Button icon={<ReloadOutlined/>} onClick={()=>action.mutate({doc:r.id,verb:'reindex'})}/><Button danger icon={<DeleteOutlined/>} onClick={()=>action.mutate({doc:r.id,verb:'delete'})}/></Space>}]}/></>},
+    {key:'documents',label:'文档',children:<><Upload.Dragger multiple accept=".pdf,.docx,.txt,.md,.markdown" customRequest={upload} showUploadList={false}><p className="ant-upload-drag-icon"><InboxOutlined/></p><p>拖拽或点击上传 PDF、DOCX、TXT、Markdown</p><p className="ant-upload-hint">上传后由 Celery 异步解析和索引</p></Upload.Dragger><Table className="section-card" rowKey="id" dataSource={documents.data} loading={documents.isLoading} columns={[{title:'文件',dataIndex:'original_name'},{title:'状态',dataIndex:'status',render:(v:string)=><Tag color={statusColor[v]}>{v}</Tag>},{title:'页/Chunk',render:(_,r)=>`${r.page_count} / ${r.chunk_count}`},{title:'启用',render:(_,r)=><Switch checked={r.enabled} onChange={(on)=>action.mutate({doc:r.id,verb:on?'enable':'disable'})}/>},{title:'操作',render:(_,r)=><Space><Button type="link" icon={<EyeOutlined/>} loading={openingDocument===r.id} onClick={()=>void openOriginal(r)}>原始文件</Button><Button icon={<ReloadOutlined/>} onClick={()=>action.mutate({doc:r.id,verb:'reindex'})}/><Button danger icon={<DeleteOutlined/>} onClick={()=>action.mutate({doc:r.id,verb:'delete'})}/></Space>}]}/></>},
     {key:'chunks',label:'Chunk',children:<ChunkPanel documents={documents.data ?? []} selected={selectedDoc} onSelect={setSelectedDoc} chunks={chunks.data ?? []}/>},
     {key:'retrieval',label:'检索测试',children:<RetrievalPanel knowledgeBaseId={id}/>},
     {key:'answer',label:'问答测试',children:<AnswerPanel knowledgeBaseId={id}/>},

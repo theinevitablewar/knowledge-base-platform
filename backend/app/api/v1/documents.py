@@ -1,7 +1,9 @@
 from datetime import UTC, datetime
+from urllib.parse import quote
 from uuid import UUID
 
 from fastapi import APIRouter, File, Request, UploadFile
+from fastapi.responses import Response
 
 from app.api.deps import PrincipalDep, SessionDep, require_scope
 from app.api.providers import SettingsDep, StorageDep
@@ -101,6 +103,39 @@ async def download_document(
     )
     await session.commit()
     return {"url": url, "expires_in": 600}
+
+
+@router.get("/documents/{document_id}/content")
+async def original_document_content(
+    document_id: UUID,
+    request: Request,
+    session: SessionDep,
+    principal: PrincipalDep,
+    settings: SettingsDep,
+    storage: StorageDep,
+) -> Response:
+    require_scope(principal, "document:read")
+    document = await DocumentService(session, principal, settings, storage).get_allowed(document_id)
+    content = await storage.get_bytes(document.storage_key)
+    await write_audit(
+        session,
+        tenant_id=principal.tenant_id,
+        user_id=principal.user_id,
+        action="document.view_original",
+        resource_type="document",
+        resource_id=document.id,
+        request_id=request.state.request_id,
+    )
+    await session.commit()
+    filename = quote(document.original_name, safe="")
+    return Response(
+        content=content,
+        media_type=document.mime_type or "application/octet-stream",
+        headers={
+            "Content-Disposition": f"inline; filename*=UTF-8''{filename}",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
 
 
 @router.delete("/documents/{document_id}", status_code=202)
