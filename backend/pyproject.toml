@@ -64,3 +64,8 @@ disable_error_code = ["import-untyped"]
 [[tool.mypy.overrides]]
 module = ["app.api.*", "app.workers.*", "app.main"]
 ignore_errors = true
+
+[[tool.uv.index]]
+name = "tencent"
+url = "https://mirrors.cloud.tencent.com/pypi/simple"
+default = true
