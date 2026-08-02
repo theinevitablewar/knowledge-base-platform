@@ -16,7 +16,10 @@ class Tenant(UUIDMixin, TimestampMixin, Base):
 
 class User(UUIDMixin, TimestampMixin, Base):
     __tablename__ = "users"
-    __table_args__ = (UniqueConstraint("tenant_id", "username"), UniqueConstraint("tenant_id", "email"))
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "username", name="uq_users_tenant_username"),
+        UniqueConstraint("tenant_id", "email", name="uq_users_tenant_email"),
+    )
     tenant_id: Mapped[UUID] = mapped_column(ForeignKey("tenants.id"), index=True)
     username: Mapped[str] = mapped_column(String(80), index=True)
     email: Mapped[str] = mapped_column(String(255), index=True)
