@@ -1,21 +1,21 @@
-# Architecture
+# 系统架构
 
-The platform uses a strict adapter boundary around infrastructure. FastAPI routes validate input and establish the authenticated `Principal`; domain services apply tenant and role checks; repositories are the only business-facing SQL layer. MinIO, Qdrant, Redis, embeddings, and LLMs are accessed through adapters.
+平台通过严格的适配器边界隔离基础设施。FastAPI 路由负责验证输入并建立已认证的 `Principal`；领域服务执行租户隔离和角色检查；Repository 是业务层访问 SQL 的唯一入口。MinIO、Qdrant、Redis、嵌入模型和大语言模型均通过适配器访问。
 
-## Data and ingestion flow
+## 数据与摄取流程
 
-Uploads are validated, hashed, written to MinIO, and registered in PostgreSQL before a Celery job is queued. The worker parses the source, persists `parsed.json`, splits content with LangChain text splitters, generates embeddings, and upserts a new vector set. Database chunks switch only after vector writes succeed, then old vectors are removed. Repeated completed task execution is a no-op.
+上传文件经过格式校验和哈希计算后写入 MinIO，并在 PostgreSQL 中登记，随后才将 Celery 任务加入队列。Worker 解析原文件、持久化 `parsed.json`、使用 LangChain 文本分割器生成文本块、计算嵌入向量并写入新向量集合。只有向量写入成功后，数据库中的文本块版本才会切换，旧向量随后删除。已完成任务再次执行时不会重复处理。
 
-## Retrieval trust boundary
+## 检索信任边界
 
-`SecureRetriever` derives tenant and user identity exclusively from JWT/API Key authentication. `PermissionService` calculates allowed knowledge bases and merges immutable tenant, knowledge-base, enabled, and deletion filters with safe user metadata. PostgreSQL performs a second authorization/status check after Qdrant recall. External agents call `/api/v1/agent/*`; they never receive database credentials.
+`SecureRetriever` 只从 JWT 或 API Key 认证上下文取得租户与用户身份。`PermissionService` 计算允许访问的知识库，并将不可覆盖的租户、知识库、启用状态和删除状态过滤条件与安全的用户元数据条件合并。Qdrant 召回后，PostgreSQL 会再次校验权限和文档状态。外部智能体只能调用 `/api/v1/agent/*`，不会获得数据库凭据。
 
-## Security decisions
+## 安全设计
 
-- API Keys are stored as SHA-256 hashes and scoped per operation.
-- Passwords use Argon2 and tokens have explicit access/refresh types.
-- Vector payloads contain tenant/workspace/KB/document scope.
-- Uploaded content is never executed; supported parsers only extract text.
-- User content is treated as untrusted data in the RAG system prompt.
-- Audit records cover uploads, deletion requests, retrieval, and RAG calls.
-- LangSmith is optional and disabled without a key; trace utility redacts credential fields.
+- API Key 仅以 SHA-256 哈希保存，并按操作范围授予 scope。
+- 密码使用 Argon2 哈希，令牌明确区分访问令牌和刷新令牌。
+- 向量载荷包含租户、工作空间、知识库和文档范围。
+- 上传内容不会被执行；受支持的解析器只提取文本。
+- RAG 系统提示词将用户内容和检索文档视为不可信数据。
+- 审计记录覆盖上传、删除请求、检索和 RAG 问答。
+- LangSmith 为可选组件；未配置密钥时自动禁用，追踪工具会脱敏凭据字段。
