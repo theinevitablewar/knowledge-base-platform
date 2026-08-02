@@ -63,7 +63,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    env_file: ${ENV_FILE:-.env.example}
+    env_file: ${ENV_FILE:-.env}
     environment:
       APP_ENV: production
       APP_DEBUG: "false"
@@ -81,12 +81,12 @@ services:
 
   worker:
     build: ./backend
-    env_file: ${ENV_FILE:-.env.example}
+    env_file: ${ENV_FILE:-.env}
     volumes: [./backend:/app]
     depends_on:
       backend: {condition: service_healthy}
       redis: {condition: service_healthy}
-    command: celery -A app.workers.celery_app.celery_app worker --loglevel=INFO --pool=solo
+    command: /app/.venv/bin/celery -A app.workers.celery_app.celery_app worker --loglevel=INFO --pool=solo
 
   frontend:
     build: ./frontend
