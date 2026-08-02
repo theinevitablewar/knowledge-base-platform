@@ -2,7 +2,7 @@
 
 install:
 	cd backend && uv sync --all-groups
-	cd frontend && npm ci
+	cd frontend && pnpm install --frozen-lockfile
 
 dev:
 	docker compose up --build
@@ -21,15 +21,15 @@ migrate:
 
 test:
 	cd backend && uv run pytest
-	cd frontend && npm test
+	cd frontend && pnpm test
 
 lint:
 	cd backend && uv run ruff check app tests && uv run mypy app
-	cd frontend && npm run lint && npm run typecheck
+	cd frontend && pnpm run lint && pnpm run typecheck
 
 format:
 	cd backend && uv run ruff format app tests && uv run ruff check app tests --fix
-	cd frontend && npm run format
+	cd frontend && pnpm run format
 
 seed:
 	cd backend && uv run python -m app.scripts.seed

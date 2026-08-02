@@ -26,7 +26,7 @@ deploy/                 部署配置
 
 ## 环境要求
 
-推荐 Docker Desktop（Compose v2）；本地开发需要 Python 3.12、[uv](https://docs.astral.sh/uv/) 和 Node.js 22。复制配置：
+推荐 Docker Desktop（Compose v2）；本地开发需要 Python 3.12、[uv](https://docs.astral.sh/uv/)、Node.js 22 和 pnpm 10。复制配置：
 
 ```powershell
 Copy-Item .env.example .env
@@ -83,8 +83,9 @@ uv run celery -A app.workers.celery_app.celery_app worker --loglevel=INFO --pool
 
 # 新终端
 Set-Location frontend
-npm ci
-npm run dev
+corepack enable
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
 迁移：`cd backend; uv run alembic upgrade head`。初始化管理员：`cd backend; uv run python -m app.scripts.seed`。
@@ -130,10 +131,10 @@ uv run ruff check app tests
 uv run mypy app
 
 Set-Location ..\frontend
-npm test
-npm run lint
-npm run typecheck
-npm run build
+pnpm test
+pnpm run lint
+pnpm run typecheck
+pnpm run build
 ```
 
 也可使用 `make test`、`make lint`、`make format`。单元测试使用 SQLite、内存存储和确定性向量替身，不调用 OpenAI。
