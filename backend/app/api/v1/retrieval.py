@@ -30,6 +30,7 @@ async def _search(
         top_k=body.top_k,
         score_threshold=body.score_threshold,
         metadata_filter=body.metadata_filter,
+        retrieval_mode=body.retrieval_mode,
     )
 
 

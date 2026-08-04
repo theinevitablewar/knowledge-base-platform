@@ -10,6 +10,7 @@ class SearchRequest(BaseModel):
     top_k: int = Field(default=8, ge=1, le=50)
     score_threshold: float | None = Field(default=None, ge=0, le=1)
     metadata_filter: dict[str, Any] | None = None
+    retrieval_mode: str = Field(default="hybrid", pattern="^(vector|hybrid)$")
 
 
 class RetrievedChunk(BaseModel):
